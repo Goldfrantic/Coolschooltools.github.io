@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Passing Game</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        canvas { background: green; display: block; margin: auto; touch-action: none; }
+        h2 { margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Football Passing Game</h1>
+    <h2>Score: <span id="score">0</span> | Time: <span id="time">60</span> sec</h2>
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let score = 0;
+        let timeLeft = 60;
+        let player = { x: 350, y: 400, width: 30, height: 30, color: "blue" };
+        let ball = { x: player.x + 15, y: player.y, radius: 5, moving: false, dx: 0, dy: 0, speed: 5 };
+        let receivers = [];
+        let defenders = [];
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        // Spawn Receivers & Defenders
+        function spawnPlayers() {
+            receivers = [
+                { x: 200, y: 100, width: 20, height: 20, color: "white" },
+                { x: 400, y: 150, width: 20, height: 20, color: "white" },
+                { x: 600, y: 120, width: 20, height: 20, color: "white" }
+            ];
+            defenders = [
+                { x: 300, y: 200, width: 20, height: 20, color: "red" },
+                { x: 500, y: 220, width: 20, height: 20, color: "red" }
+            ];
+        }
+
+        // Handle Mouse & Touch Start (Drag Start)
+        function startDrag(event) {
+            if (!ball.moving) {
+                let rect = canvas.getBoundingClientRect();
+                let x = (event.touches ? event.touches[0].clientX : event.clientX) - rect.left;
+                let y = (event.touches ? event.touches[0].clientY : event.clientY) - rect.top;
+                if (x > player.x && x < player.x + player.width && y > player.y && y < player.y + player.height) {
+                    isDragging = true;
+                    dragStart = { x, y };
+                }
+            }
+        }
+
+        // Handle Drag End (Pass Ball)
+        function endDrag(event) {
+            if (isDragging) {
+                let rect = canvas.getBoundingClientRect();
+                let x = (event.changedTouches ? event.changedTouches[0].clientX : event.clientX) - rect.left;
+                let y = (event.changedTouches ? event.changedTouches[0].clientY : event.clientY) - rect.top;
+
+                let dx = dragStart.x - x;
+                let dy = dragStart.y - y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 10) { // Prevent accidental short drags
+                    ball.moving = true;
+                    ball.dx = dx / 15; // Control throw speed
+                    ball.dy = dy / 15;
+                }
+                isDragging = false;
+            }
+        }
+
+        // Update Game State
+        function update() {
+            if (ball.moving) {
+                ball.x += ball.dx * ball.speed;
+                ball.y += ball.dy * ball.speed;
+
+                let caught = receivers.find(r => ball.x > r.x && ball.x < r.x + r.width && ball.y > r.y && ball.y < r.y + r.height);
+                let intercepted = defenders.find(d => ball.x > d.x && ball.x < d.x + d.width && ball.y > d.y && ball.y < d.y + d.height);
+
+                if (caught) {
+                    score += 1;
+                    document.getElementById("score").innerText = score;
+                    resetBall();
+                } else if (intercepted || ball.y < 0) {
+                    resetBall();
+                }
+            }
+        }
+
+        // Reset Ball After Play
+        function resetBall() {
+            ball.moving = false;
+            ball.x = player.x + 15;
+            ball.y = player.y;
+            ball.dx = 0;
+            ball.dy = 0;
+        }
+
+        // Draw Game Elements
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            ctx.fillStyle = "brown";
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            receivers.forEach(r => {
+                ctx.fillStyle = r.color;
+                ctx.fillRect(r.x, r.y, r.width, r.height);
+            });
+
+            defenders.forEach(d => {
+                ctx.fillStyle = d.color;
+                ctx.fillRect(d.x, d.y, d.width, d.height);
+            });
+
+            if (isDragging) {
+                ctx.strokeStyle = "yellow";
+                ctx.beginPath();
+                ctx.moveTo(dragStart.x, dragStart.y);
+                ctx.lineTo(ball.x, ball.y);
+                ctx.stroke();
+            }
+        }
+
+        // Game Loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Game Timer
+        function startTimer() {
+            let timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById("time").innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    alert("Game Over! Final Score: " + score);
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        // Add Event Listeners for Touch & Mouse
+        canvas.addEventListener("mousedown", startDrag);
+        canvas.addEventListener("mouseup", endDrag);
+        canvas.addEventListener("touchstart", startDrag);
+        canvas.addEventListener("touchend", endDrag);
+
+        spawnPlayers();
+        startTimer();
+        gameLoop();
+    </script>
+</body>
+</html>
