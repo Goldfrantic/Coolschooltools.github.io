@@ -24,9 +24,4 @@
         }
     </style>
 </head>
-<body>
-    <h1>Welcome to Cool School Tools</h1>
-    <p>Click the button below to go to the main site.</p>
-    <button onclick="window.location.href='https://www.coolmathgames.com/'">Go to Cool Math Games</button>
-</body>
 </html>
